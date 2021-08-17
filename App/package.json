@@ -1,0 +1,33 @@
+{
+  "name": "cluster_testing",
+  "version": "0.1.0",
+  "bin": {
+    "cluster_testing": "bin/cluster_testing.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@aws-cdk/assert": "1.118.0",
+    "@types/jest": "^27.0.1",
+    "@types/node": "16.6.1",
+    "jest": "^27.0.6",
+    "ts-jest": "^27.0.4",
+    "aws-cdk": "1.118.0",
+    "ts-node": "^10.2.0",
+    "typescript": "~4.3.5"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-ec2": "^1.118.0",
+    "@aws-cdk/aws-eks": "^1.118.0",
+    "@aws-cdk/aws-iam": "^1.118.0",
+    "@aws-cdk/core": "^1.118.0",
+    "cdk8s": "^0.33.0",
+    "cdk8s-plus": "^0.33.0",
+    "constructs": "^3.3.122",
+    "source-map-support": "^0.5.19"
+  }
+}
