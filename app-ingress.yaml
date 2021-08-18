@@ -8,9 +8,10 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - http:
+    - host: kube-dashboard.enthires.com
+      http:
         paths:
-          - path: /app
+          - path: /
             backend:
               serviceName: the-cluster-namedeploy-the-deployment-test-service-pod-b25b639e
               servicePort: 80

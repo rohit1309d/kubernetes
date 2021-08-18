@@ -10,7 +10,8 @@ metadata:
   namespace: kubernetes-dashboard
 spec:
   rules:
-    - http:
+    - host: kube-dashboard.enthires.com
+      http:
         paths:
           - path: /dashboard(/|$)(.*)
             backend:
