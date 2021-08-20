@@ -10,6 +10,7 @@ export class ClusterTestingStack extends cdk.Stack {
     // The code that defines your stack goes here
     const cluster = new ClusterConstruct(this, 'The-Test-Cluster', {
       clusterName: 'The-Cluster-name',
+      instanceClass:ec2.InstanceClass.T3,
       instanceSize: ec2.InstanceSize.MEDIUM,
       deploymentProps: {
         deploymentName: 'The-Deployment-Test',
