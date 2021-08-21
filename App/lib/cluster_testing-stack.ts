@@ -10,8 +10,12 @@ export class ClusterTestingStack extends cdk.Stack {
     // The code that defines your stack goes here
     const cluster = new ClusterConstruct(this, 'The-Test-Cluster', {
       clusterName: 'The-Cluster-name',
-      instanceClass:ec2.InstanceClass.T3,
+      instanceClass:ec2.InstanceClass.T2,
       instanceSize: ec2.InstanceSize.MEDIUM,
+      deployKubeDashboard: true,
+      // domainNameForApp: 'kube-dashboard.enthires.com',
+      exposeAppUsingIngress: true,
+      exposeKubeDashboardUsingIngress: true,
       deploymentProps: {
         deploymentName: 'The-Deployment-Test',
         dockerImage: 'stefanprodan/podinfo',

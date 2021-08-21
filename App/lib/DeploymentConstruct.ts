@@ -49,7 +49,8 @@ export interface DeploymentProps {
 
 export class DeploymentConstruct extends cdk8s.Chart {
 
-  deployment : kplus.Deployment;
+  deployment: kplus.Deployment;
+  service: kplus.Service;
 
   constructor(scope: Construct, id: string, props: DeploymentProps ) {
     super(scope, id);
@@ -62,11 +63,11 @@ export class DeploymentConstruct extends cdk8s.Chart {
       })],
     });
 
-    this.exposeDeployment(props.servicePort || 80, props.serviceType || kplus.ServiceType.LOAD_BALANCER);
+    this.service = this.exposeDeployment(props.servicePort || 80, props.serviceType || kplus.ServiceType.LOAD_BALANCER);
   }
 
   exposeDeployment(servicePort: number, serviceType: kplus.ServiceType) {
-    this.deployment.expose(servicePort, {
+    return this.deployment.expose(servicePort, {
       serviceType: serviceType,
     });
   }
