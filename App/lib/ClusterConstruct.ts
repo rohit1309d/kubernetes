@@ -51,7 +51,7 @@ export interface ClusterProps {
   /**
    * Expose App using Ingress?
    *
-   * @default - false
+   * @default false
    *
    */
    readonly exposeAppUsingIngress?: boolean;
@@ -73,7 +73,7 @@ export interface ClusterProps {
    /**
    * deploy KubeDashboard?
    *
-   * @default - true
+   * @default true
    *
    */
   readonly deployKubeDashboard?: boolean;
@@ -81,10 +81,10 @@ export interface ClusterProps {
   /**
    * Expose Kube Dashboard using Ingress?
    *
-   * @default - false
+   * @default false
    *
    */
-   readonly exposeKubeDashboardUsingIngress?: boolean;
+  readonly exposeKubeDashboardUsingIngress?: boolean;
 
   /**
    * domain name for KubeDashboard
@@ -93,6 +93,30 @@ export interface ClusterProps {
    *
    */
   readonly domainNameForKubeDashboard?: string;
+
+  /**
+   * deploy KibanaDashboard?
+   *
+   * @default false
+   *
+   */
+  readonly deployKibanaDashboard?: boolean;
+
+   /**
+    * Expose Kibana Dashboard using Ingress?
+    *
+    * @default false
+    *
+    */
+    readonly exposeKibanaDashboardUsingIngress?: boolean;
+ 
+   /**
+    * domain name for KibanaDashboard
+    *
+    * default - same domainName as domainNameForApp
+    *
+    */
+   readonly domainNameForKibanaDashboard?: string;
 
   /**
    * Props for deployment
@@ -114,7 +138,11 @@ export class ClusterConstruct extends cdk.Construct {
     };
 
     if (props.exposeKubeDashboardUsingIngress && !props.deployKubeDashboard) {
-      throw new Error('deployKubeDashboard cannot be False when exposeKubeDashboardUsingIngress is true')
+      throw new Error('deployKubeDashboard cannot be false when exposeKubeDashboardUsingIngress is true')
+    }
+
+    if (props.exposeKibanaDashboardUsingIngress && !props.deployKibanaDashboard) {
+      throw new Error('deployKibanaDashboard cannot be false when exposeKibanaDashboardUsingIngress is true')
     }
 
     super(scope, id);
@@ -124,6 +152,7 @@ export class ClusterConstruct extends cdk.Construct {
 
     this.cluster = new eks.Cluster(this, props.clusterName, {
       clusterName: props.clusterName,
+      defaultCapacity: 3,
       vpc: vpc,
       defaultCapacityInstance: instance,
       version: props.kubernetesVersion || eks.KubernetesVersion.V1_19,
@@ -167,6 +196,14 @@ export class ClusterConstruct extends cdk.Construct {
       'kubernetes-dashboard',
       443,
       'kubernetes-dashboard');
+    }
+
+    if (props.deployKibanaDashboard) {
+      
+      if (props.exposeKibanaDashboardUsingIngress)
+        this.deployKibanaDashboard(props.exposeKibanaDashboardUsingIngress, props.domainNameForKibanaDashboard || props.domainNameForApp);
+      else
+        this.deployKibanaDashboard(false);
     }
   }
 
@@ -254,5 +291,187 @@ export class ClusterConstruct extends cdk.Construct {
       },
     };
     this.cluster.addManifest(name, ingressManifest);
+  }
+
+  deployKibanaDashboard(exposeUsingIngress: boolean, domainName?: string) {
+
+    this.cluster.addManifest('kube-logging', {
+      apiVersion: 'v1',
+      kind: 'Namespace',
+      metadata: { name: 'kube-logging' }
+    });
+
+  // elasticsearch helm chart
+    this.cluster.addHelmChart('elasticsearch', {
+      repository: 'https://helm.elastic.co',
+      chart: 'elasticsearch',
+      release: 'elasticsearch',
+      namespace: 'kube-logging',
+      values: {
+        'esJavaOpts': '-Xms512m -Xmx512m',
+        'extraInitContainers': [
+          {
+            'name': 'fix-permissions',
+            'image': 'busybox',
+            'command': ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"],
+            'securityContext': {
+              'runAsUser': 0,
+              'privileged': true
+            },  
+            'volumeMounts': [
+              {
+                'name': 'elasticsearch',
+                'mountPath': '/usr/share/elasticsearch/data'
+              },
+            ],
+          },
+          {
+            'name': 'increase-fd-ulimit',
+            'image': 'busybox',
+            'command': ["sh", "-c", "ulimit -n 65536"],
+            'securityContext': {
+              'runAsUser': 0,
+              'privileged': true            
+            }
+          }
+        ],
+        'volumeClaimTemplate': 
+        {
+          'accessModes': [ "ReadWriteOnce" ],
+          'storageClassName': 'gp2',
+          'resources': 
+          {
+            'requests':
+            {
+              'storage': '10Gi'
+            },              
+          },            
+        },
+        'fullnameOverride': 'elasticsearch',
+        'terminationGracePeriod': 30
+      }
+    });
+
+  // kibana helm chart
+    this.cluster.addHelmChart('kibana', {
+      repository: 'https://helm.elastic.co',
+      chart: 'kibana',
+      release: 'kibana',
+      namespace: 'kube-logging',
+      values: {
+        'elasticsearchHosts': 'http://elasticsearch:9200',
+        'elasticsearchURL': 'http://elasticsearch:9200',
+        'replicas': 1,
+        'healthCheckPath': '/kibana/api/status',
+        'resources': {
+          'requests': {
+            'cpu': '100m'
+          },
+          'limits': {
+            'cpu': '1000m'
+          }
+        },
+        'extraEnvs': [
+          {
+            'name': 'SERVER_BASEPATH',
+            'value': '/kibana'
+          },
+          {
+            'name': 'SERVER_REWRITEBASEPATH',
+            'value': "true"
+          }
+        ],
+        'ingress': {
+          'enabled': exposeUsingIngress,
+          'annotations': {
+            'kubernetes.io/ingress.class': 'nginx',
+            'nginx.ingress.kubernetes.io/ssl-redirect': 'false',
+            'nginx.ingress.kubernetes.io/configuration-snippet': 'rewrite ^/(.*)$ /$1 break;\n',
+            'nginx.ingress.kubernetes.io/rewrite-target': '/'
+          },
+          'hosts': [
+            {
+              'host': domainName? domainName : undefined,
+              'paths': [
+                {
+                  'path': '/kibana'
+                }
+              ]
+            }
+          ]
+        }
+      }
+    });
+  
+  // fluentd helm chart
+    this.cluster.addHelmChart('fluentd', {
+      repository: 'https://fluent.github.io/helm-charts',
+      chart: 'fluentd',
+      release: 'fluentd',
+      namespace: 'kube-logging',
+      values: {
+        "tolerations": [
+          {
+            "key": "node-role.kubernetes.io/master",
+            "effect": "NoSchedule"
+          }
+        ],
+        "env": [
+          {
+            "name": "FLUENT_ELASTICSEARCH_HOST",
+            "value": "elasticsearch.kube-logging.svc.cluster.local"
+          },
+          {
+            "name": "FLUENT_ELASTICSEARCH_PORT",
+            "value": "9200"
+          },
+          {
+            "name": "FLUENT_ELASTICSEARCH_SCHEME",
+            "value": "http"
+          },
+          {
+            "name": "FLUENTD_SYSTEMD_CONF",
+            "value": "disable"
+          }
+        ],
+        "resources": {
+          "limits": {
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "200Mi"
+          }
+        },
+        "volumes": [
+          {
+            "name": "varlog",
+            "hostPath": {
+              "path": "/var/log"
+            }
+          },
+          {
+            "name": "varlibdockercontainers",
+            "hostPath": {
+              "path": "/var/lib/docker/containers"
+            }
+          }
+        ],
+        "volumeMounts": [
+          {
+            "name": "varlog",
+            "mountPath": "/var/log"
+          },
+          {
+            "name": "varlibdockercontainers",
+            "mountPath": "/var/lib/docker/containers",
+            "readOnly": true
+          }
+        ],
+        "dashboards": {
+          "enabled": false
+        }
+      }
+    });
   }
 }

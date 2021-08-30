@@ -11,16 +11,18 @@ export class ClusterTestingStack extends cdk.Stack {
     const cluster = new ClusterConstruct(this, 'The-Test-Cluster', {
       clusterName: 'The-Cluster-name',
       instanceClass:ec2.InstanceClass.T2,
-      instanceSize: ec2.InstanceSize.MEDIUM,
+      instanceSize: ec2.InstanceSize.XLARGE,
       deployKubeDashboard: true,
       // domainNameForApp: 'kube-dashboard.enthires.com',
       exposeAppUsingIngress: true,
       exposeKubeDashboardUsingIngress: true,
+      deployKibanaDashboard: true,
+      exposeKibanaDashboardUsingIngress: true,
       deploymentProps: {
         deploymentName: 'The-Deployment-Test',
-        dockerImage: 'stefanprodan/podinfo',
+        dockerImage: '577753415598.dkr.ecr.us-east-2.amazonaws.com/helloworld',
         servicePort: 80,
-        containerPort: 9898,
+        containerPort: 3000,
       },
     });
   }

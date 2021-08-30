@@ -1,0 +1,30 @@
+elasticsearchHosts: "http://elasticsearch:9200"
+elasticsearchURL: "http://elasticsearch:9200"
+
+replicas: 1
+
+healthCheckPath: "/kibana/api/status"
+
+resources:
+  requests:
+    cpu: "100m"
+  limits:
+    cpu: "1000m"
+
+extraEnvs:
+  - name: SERVER_BASEPATH
+    value: "/kibana"
+  - name: SERVER_REWRITEBASEPATH
+    value: "true"
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^/(.*)$ /$1 break;
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - paths:
+        - path: /kibana

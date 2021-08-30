@@ -1,0 +1,30 @@
+esJavaOpts: "-Xms512m -Xmx512m"
+
+extraInitContainers:
+  - name: fix-permissions
+    image: busybox
+    command: ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"]
+    securityContext:
+      runAsUser: 0
+      privileged: true
+    volumeMounts:
+    - name: elasticsearch
+      mountPath: /usr/share/elasticsearch/data
+  - name: increase-fd-ulimit
+    image: busybox
+    command: ["sh", "-c", "ulimit -n 65536"]
+    securityContext:
+      runAsUser: 0
+      privileged: true
+
+volumeClaimTemplate:
+  accessModes: [ "ReadWriteOnce" ]
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 10Gi
+
+fullnameOverride: "elasticsearch"
+terminationGracePeriod: 30
+
+sysctlVmMaxMapCount: 262144
