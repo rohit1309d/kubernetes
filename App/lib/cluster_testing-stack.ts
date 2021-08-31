@@ -13,11 +13,12 @@ export class ClusterTestingStack extends cdk.Stack {
       instanceClass:ec2.InstanceClass.T2,
       instanceSize: ec2.InstanceSize.XLARGE,
       deployKubeDashboard: true,
-      // domainNameForApp: 'kube-dashboard.enthires.com',
       exposeAppUsingIngress: true,
       exposeKubeDashboardUsingIngress: true,
       deployKibanaDashboard: true,
       exposeKibanaDashboardUsingIngress: true,
+      deployGrafana: true,
+      exposeGrafanaUsingIngress: true,
       deploymentProps: {
         deploymentName: 'The-Deployment-Test',
         dockerImage: '577753415598.dkr.ecr.us-east-2.amazonaws.com/helloworld',

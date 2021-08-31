@@ -108,7 +108,7 @@ export interface ClusterProps {
     * @default false
     *
     */
-    readonly exposeKibanaDashboardUsingIngress?: boolean;
+  readonly exposeKibanaDashboardUsingIngress?: boolean;
  
    /**
     * domain name for KibanaDashboard
@@ -116,7 +116,29 @@ export interface ClusterProps {
     * default - same domainName as domainNameForApp
     *
     */
-   readonly domainNameForKibanaDashboard?: string;
+  readonly domainNameForKibanaDashboard?: string;
+  
+   /**
+   * deploy Grafana?
+   *
+   * @default false
+   *
+   */
+  readonly deployGrafana?: boolean;
+
+  /**
+   * Expose Grafana using Ingress?
+   *
+   * @default false
+   *
+   */
+ readonly exposeGrafanaUsingIngress?: boolean;
+
+    /**
+    * domain name for Grafana
+    *
+    */
+  readonly domainNameForGrafana?: string;
 
   /**
    * Props for deployment
@@ -205,6 +227,11 @@ export class ClusterConstruct extends cdk.Construct {
       else
         this.deployKibanaDashboard(false);
     }
+
+    if (props.deployGrafana) {
+      this.deployGrafana(props.exposeGrafanaUsingIngress);
+    }
+
   }
 
   addManifestFromUrl(manifestName: string, manifestUrl: string) {
@@ -295,17 +322,12 @@ export class ClusterConstruct extends cdk.Construct {
 
   deployKibanaDashboard(exposeUsingIngress: boolean, domainName?: string) {
 
-    this.cluster.addManifest('kube-logging', {
-      apiVersion: 'v1',
-      kind: 'Namespace',
-      metadata: { name: 'kube-logging' }
-    });
-
   // elasticsearch helm chart
     this.cluster.addHelmChart('elasticsearch', {
       repository: 'https://helm.elastic.co',
       chart: 'elasticsearch',
       release: 'elasticsearch',
+      createNamespace: true,
       namespace: 'kube-logging',
       values: {
         'esJavaOpts': '-Xms512m -Xmx512m',
@@ -470,6 +492,47 @@ export class ClusterConstruct extends cdk.Construct {
         ],
         "dashboards": {
           "enabled": false
+        }
+      }
+    });
+  }
+
+  deployGrafana(exposeUsingIngress?: boolean, domainName?: string) {
+    this.cluster.addHelmChart('kube-prometheus-stack', {
+      repository: 'https://prometheus-community.github.io/helm-charts',
+      chart: 'kube-prometheus-stack',
+      release: 'prometheus',
+      createNamespace: true,
+      namespace: 'monitoring',
+      values: {
+        "prometheusOperator": {
+          "admissionWebhooks": {
+            "enabled": false,
+            "patch": {
+              "enabled": false
+            }
+          },
+          "tls": {
+            "enabled": false
+          }
+        },
+        "grafana": {
+          'grafana.ini': {
+            'server': {
+              'root_url': '%(protocol)s://%(domain)s:%(http_port)s/grafana/',
+              'server_from_sub_path': true
+            }
+          },
+          'ingress': {
+            'enabled': exposeUsingIngress,
+            'annotations': {
+              "kubernetes.io/ingress.class": "nginx",
+              "nginx.ingress.kubernetes.io/backend-protocol": "HTTP",
+              "nginx.ingress.kubernetes.io/configuration-snippet": "rewrite ^(/)$ $1/ break;\n",
+              "nginx.ingress.kubernetes.io/rewrite-target": "/$2"
+            },
+            'path': '/grafana(/|$)(.*)'
+          }
         }
       }
     });
