@@ -1,0 +1,15 @@
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
+  tls:
+    enabled: false
+graphana:
+  ingress:
+    enabled: true
+    annotations: 
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+    path: /grafana(/|$)(.*)
