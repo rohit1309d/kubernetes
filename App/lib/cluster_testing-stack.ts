@@ -24,6 +24,9 @@ export class ClusterTestingStack extends cdk.Stack {
         dockerImage: '577753415598.dkr.ecr.us-east-2.amazonaws.com/helloworld',
         servicePort: 80,
         containerPort: 3000,
+        envVar: {
+          'DEMO_GREETING': 'Good Morning'
+        }
       },
     });
   }
