@@ -54,7 +54,7 @@ export interface ClusterProps {
    * @default false
    *
    */
-   readonly exposeAppUsingIngress?: boolean;
+  readonly exposeAppUsingIngress?: boolean;
 
   /**
    * Domain name for App
@@ -70,7 +70,7 @@ export interface ClusterProps {
    */
   readonly urlPathForApp?: string;
 
-   /**
+  /**
    * deploy KubeDashboard?
    *
    * @default true
@@ -102,23 +102,23 @@ export interface ClusterProps {
    */
   readonly deployKibanaDashboard?: boolean;
 
-   /**
+  /**
     * Expose Kibana Dashboard using Ingress?
     *
     * @default false
     *
     */
   readonly exposeKibanaDashboardUsingIngress?: boolean;
- 
-   /**
+
+  /**
     * domain name for KibanaDashboard
     *
     * default - same domainName as domainNameForApp
     *
     */
   readonly domainNameForKibanaDashboard?: string;
-  
-   /**
+
+  /**
    * deploy Grafana?
    *
    * @default false
@@ -132,9 +132,9 @@ export interface ClusterProps {
    * @default false
    *
    */
- readonly exposeGrafanaUsingIngress?: boolean;
+  readonly exposeGrafanaUsingIngress?: boolean;
 
-    /**
+  /**
     * domain name for Grafana
     *
     */
@@ -160,11 +160,11 @@ export class ClusterConstruct extends cdk.Construct {
     };
 
     if (props.exposeKubeDashboardUsingIngress && !props.deployKubeDashboard) {
-      throw new Error('deployKubeDashboard cannot be false when exposeKubeDashboardUsingIngress is true')
+      throw new Error('deployKubeDashboard cannot be false when exposeKubeDashboardUsingIngress is true');
     }
 
     if (props.exposeKibanaDashboardUsingIngress && !props.deployKibanaDashboard) {
-      throw new Error('deployKibanaDashboard cannot be false when exposeKibanaDashboardUsingIngress is true')
+      throw new Error('deployKibanaDashboard cannot be false when exposeKibanaDashboardUsingIngress is true');
     }
 
     super(scope, id);
@@ -192,44 +192,49 @@ export class ClusterConstruct extends cdk.Construct {
     }
 
     if (props.exposeAppUsingIngress) {
-      this.exposeUsingNginx('app-ingress', 
-      {
-        'nginx.ingress.kubernetes.io/rewrite-target': '/',
-        'kubernetes.io/ingress.class': 'nginx',
-      },
-      props.domainNameForApp,
-      props.urlPathForApp,
-      'Prefix',
-      this.deployment.service.name,
-      this.deployment.service.ports[0].port,);
+      this.exposeUsingNginx('app-ingress',
+        {
+          'nginx.ingress.kubernetes.io/rewrite-target': '/',
+          'kubernetes.io/ingress.class': 'nginx',
+        },
+        props.domainNameForApp,
+        props.urlPathForApp,
+        'Prefix',
+        this.deployment.service.name,
+        this.deployment.service.ports[0].port);
     }
 
     if (props.exposeKubeDashboardUsingIngress) {
       this.exposeUsingNginx('dashboard-ingress',
-      {
-        'nginx.ingress.kubernetes.io/backend-protocol': 'HTTPS',
-        'nginx.ingress.kubernetes.io/rewrite-target': '/$2',
-        'nginx.ingress.kubernetes.io/use-regex': 'true',
-        'nginx.ingress.kubernetes.io/configuration-snippet': 'rewrite ^(/dashboard)$ $1/ redirect;\n'
-      },
-      props.domainNameForApp,
-      '/dashboard(/|$)(.*)',
-      'ImplementationSpecific',
-      'kubernetes-dashboard',
-      443,
-      'kubernetes-dashboard');
+        {
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTPS',
+          'nginx.ingress.kubernetes.io/rewrite-target': '/$2',
+          'nginx.ingress.kubernetes.io/use-regex': 'true',
+          'nginx.ingress.kubernetes.io/configuration-snippet': 'rewrite ^(/dashboard)$ $1/ redirect;\n',
+        },
+        props.domainNameForApp,
+        '/dashboard(/|$)(.*)',
+        'ImplementationSpecific',
+        'kubernetes-dashboard',
+        443,
+        'kubernetes-dashboard');
     }
 
     if (props.deployKibanaDashboard) {
-      
-      if (props.exposeKibanaDashboardUsingIngress)
+
+      if (props.exposeKibanaDashboardUsingIngress) {
         this.deployKibanaDashboard(props.exposeKibanaDashboardUsingIngress, props.domainNameForKibanaDashboard || props.domainNameForApp);
-      else
+      } else {
         this.deployKibanaDashboard(false);
+      }
     }
 
     if (props.deployGrafana) {
-      this.deployGrafana(props.exposeGrafanaUsingIngress);
+      if (props.exposeGrafanaUsingIngress) {
+        this.deployGrafana(props.exposeGrafanaUsingIngress, props.domainNameForGrafana || props.domainNameForApp);
+      } else {
+        this.deployGrafana(false);
+      }
     }
 
   }
@@ -253,7 +258,7 @@ export class ClusterConstruct extends cdk.Construct {
       metadata: {
         name: 'eks-admin',
         namespace: 'kube-system',
-      }
+      },
     });
 
     this.cluster.addManifest('eks-admin-clusterrolebinding', {
@@ -288,7 +293,7 @@ export class ClusterConstruct extends cdk.Construct {
     const ingressManifest = {
       apiVersion: 'networking.k8s.io/v1',
       kind: 'Ingress',
-      metadata:{
+      metadata: {
         name: name,
         namespace: namespace? namespace : 'default',
         annotations: annotations,
@@ -307,14 +312,14 @@ export class ClusterConstruct extends cdk.Construct {
                       name: serviceName,
                       port: {
                         number: servicePort,
-                      }
-                    }
+                      },
+                    },
                   },
-                }
-              ]
-            },      
-          }
-        ]
+                },
+              ],
+            },
+          },
+        ],
       },
     };
     this.cluster.addManifest(name, ingressManifest);
@@ -322,7 +327,7 @@ export class ClusterConstruct extends cdk.Construct {
 
   deployKibanaDashboard(exposeUsingIngress: boolean, domainName?: string) {
 
-  // elasticsearch helm chart
+    // elasticsearch helm chart
     this.cluster.addHelmChart('elasticsearch', {
       repository: 'https://helm.elastic.co',
       chart: 'elasticsearch',
@@ -330,174 +335,176 @@ export class ClusterConstruct extends cdk.Construct {
       createNamespace: true,
       namespace: 'kube-logging',
       values: {
-        'esJavaOpts': '-Xms512m -Xmx512m',
-        'extraInitContainers': [
+        esJavaOpts: '-Xms512m -Xmx512m',
+        extraInitContainers: [
           {
-            'name': 'fix-permissions',
-            'image': 'busybox',
-            'command': ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"],
-            'securityContext': {
-              'runAsUser': 0,
-              'privileged': true
-            },  
-            'volumeMounts': [
+            name: 'fix-permissions',
+            image: 'busybox',
+            command: ['sh', '-c', 'chown -R 1000:1000 /usr/share/elasticsearch/data'],
+            securityContext: {
+              runAsUser: 0,
+              privileged: true,
+            },
+            volumeMounts: [
               {
-                'name': 'elasticsearch',
-                'mountPath': '/usr/share/elasticsearch/data'
+                name: 'elasticsearch',
+                mountPath: '/usr/share/elasticsearch/data',
               },
             ],
           },
           {
-            'name': 'increase-fd-ulimit',
-            'image': 'busybox',
-            'command': ["sh", "-c", "ulimit -n 65536"],
-            'securityContext': {
-              'runAsUser': 0,
-              'privileged': true            
-            }
-          }
+            name: 'increase-fd-ulimit',
+            image: 'busybox',
+            command: ['sh', '-c', 'ulimit -n 65536'],
+            securityContext: {
+              runAsUser: 0,
+              privileged: true,
+            },
+          },
         ],
-        'volumeClaimTemplate': 
+        volumeClaimTemplate:
         {
-          'accessModes': [ "ReadWriteOnce" ],
-          'storageClassName': 'gp2',
-          'resources': 
+          accessModes: ['ReadWriteOnce'],
+          storageClassName: 'gp2',
+          resources:
           {
-            'requests':
+            requests:
             {
-              'storage': '10Gi'
-            },              
-          },            
+              storage: '10Gi',
+            },
+          },
         },
-        'fullnameOverride': 'elasticsearch',
-        'terminationGracePeriod': 30
-      }
+        fullnameOverride: 'elasticsearch',
+        terminationGracePeriod: 30,
+      },
     });
 
-  // kibana helm chart
+    // kibana helm chart
     this.cluster.addHelmChart('kibana', {
       repository: 'https://helm.elastic.co',
       chart: 'kibana',
       release: 'kibana',
+      createNamespace: true,
       namespace: 'kube-logging',
       values: {
-        'elasticsearchHosts': 'http://elasticsearch:9200',
-        'elasticsearchURL': 'http://elasticsearch:9200',
-        'replicas': 1,
-        'healthCheckPath': '/kibana/api/status',
-        'resources': {
-          'requests': {
-            'cpu': '100m'
+        elasticsearchHosts: 'http://elasticsearch:9200',
+        elasticsearchURL: 'http://elasticsearch:9200',
+        replicas: 1,
+        healthCheckPath: '/kibana/api/status',
+        resources: {
+          requests: {
+            cpu: '100m',
           },
-          'limits': {
-            'cpu': '1000m'
-          }
+          limits: {
+            cpu: '1000m',
+          },
         },
-        'extraEnvs': [
+        extraEnvs: [
           {
-            'name': 'SERVER_BASEPATH',
-            'value': '/kibana'
+            name: 'SERVER_BASEPATH',
+            value: '/kibana',
           },
           {
-            'name': 'SERVER_REWRITEBASEPATH',
-            'value': "true"
-          }
+            name: 'SERVER_REWRITEBASEPATH',
+            value: 'true',
+          },
         ],
-        'ingress': {
-          'enabled': exposeUsingIngress,
-          'annotations': {
+        ingress: {
+          enabled: exposeUsingIngress,
+          annotations: {
             'kubernetes.io/ingress.class': 'nginx',
             'nginx.ingress.kubernetes.io/ssl-redirect': 'false',
             'nginx.ingress.kubernetes.io/configuration-snippet': 'rewrite ^/(.*)$ /$1 break;\n',
-            'nginx.ingress.kubernetes.io/rewrite-target': '/'
+            'nginx.ingress.kubernetes.io/rewrite-target': '/',
           },
-          'hosts': [
+          hosts: [
             {
-              'host': domainName? domainName : undefined,
-              'paths': [
+              host: domainName? domainName : undefined,
+              paths: [
                 {
-                  'path': '/kibana'
-                }
-              ]
-            }
-          ]
-        }
-      }
+                  path: '/kibana',
+                },
+              ],
+            },
+          ],
+        },
+      },
     });
-  
-  // fluentd helm chart
+
+    // fluentd helm chart
     this.cluster.addHelmChart('fluentd', {
       repository: 'https://fluent.github.io/helm-charts',
       chart: 'fluentd',
       release: 'fluentd',
+      createNamespace: true,
       namespace: 'kube-logging',
       values: {
-        "tolerations": [
+        tolerations: [
           {
-            "key": "node-role.kubernetes.io/master",
-            "effect": "NoSchedule"
-          }
+            key: 'node-role.kubernetes.io/master',
+            effect: 'NoSchedule',
+          },
         ],
-        "env": [
+        env: [
           {
-            "name": "FLUENT_ELASTICSEARCH_HOST",
-            "value": "elasticsearch.kube-logging.svc.cluster.local"
+            name: 'FLUENT_ELASTICSEARCH_HOST',
+            value: 'elasticsearch.kube-logging.svc.cluster.local',
           },
           {
-            "name": "FLUENT_ELASTICSEARCH_PORT",
-            "value": "9200"
+            name: 'FLUENT_ELASTICSEARCH_PORT',
+            value: '9200',
           },
           {
-            "name": "FLUENT_ELASTICSEARCH_SCHEME",
-            "value": "http"
+            name: 'FLUENT_ELASTICSEARCH_SCHEME',
+            value: 'http',
           },
           {
-            "name": "FLUENTD_SYSTEMD_CONF",
-            "value": "disable"
-          }
+            name: 'FLUENTD_SYSTEMD_CONF',
+            value: 'disable',
+          },
         ],
-        "resources": {
-          "limits": {
-            "memory": "512Mi"
+        resources: {
+          limits: {
+            memory: '512Mi',
           },
-          "requests": {
-            "cpu": "100m",
-            "memory": "200Mi"
-          }
+          requests: {
+            cpu: '100m',
+            memory: '200Mi',
+          },
         },
-        "volumes": [
+        volumes: [
           {
-            "name": "varlog",
-            "hostPath": {
-              "path": "/var/log"
-            }
+            name: 'varlog',
+            hostPath: {
+              path: '/var/log',
+            },
           },
           {
-            "name": "varlibdockercontainers",
-            "hostPath": {
-              "path": "/var/lib/docker/containers"
-            }
-          }
+            name: 'varlibdockercontainers',
+            hostPath: {
+              path: '/var/lib/docker/containers',
+            },
+          },
         ],
-        "volumeMounts": [
+        volumeMounts: [
           {
-            "name": "varlog",
-            "mountPath": "/var/log"
+            name: 'varlog',
+            mountPath: '/var/log',
           },
           {
-            "name": "varlibdockercontainers",
-            "mountPath": "/var/lib/docker/containers",
-            "readOnly": true
-          }
+            name: 'varlibdockercontainers',
+            mountPath: '/var/lib/docker/containers',
+            readOnly: true,
+          },
         ],
-        "dashboards": {
-          "enabled": false
-        }
-      }
+        dashboards: {
+          enabled: false,
+        },
+      },
     });
   }
 
-  deployGrafana(exposeUsingIngress?: boolean, domainName?: string) {
+  deployGrafana(exposeUsingIngress: boolean, domainName?: string) {
     this.cluster.addHelmChart('kube-prometheus-stack', {
       repository: 'https://prometheus-community.github.io/helm-charts',
       chart: 'kube-prometheus-stack',
@@ -505,36 +512,37 @@ export class ClusterConstruct extends cdk.Construct {
       createNamespace: true,
       namespace: 'monitoring',
       values: {
-        "prometheusOperator": {
-          "admissionWebhooks": {
-            "enabled": false,
-            "patch": {
-              "enabled": false
-            }
+        prometheusOperator: {
+          admissionWebhooks: {
+            enabled: false,
+            patch: {
+              enabled: false,
+            },
           },
-          "tls": {
-            "enabled": false
-          }
+          tls: {
+            enabled: false,
+          },
         },
-        "grafana": {
+        grafana: {
           'grafana.ini': {
-            'server': {
-              'root_url': '%(protocol)s://%(domain)s:%(http_port)s/grafana/',
-              'server_from_sub_path': true
-            }
+            server: {
+              root_url: '%(protocol)s://%(domain)s:%(http_port)s/grafana/',
+              server_from_sub_path: true,
+            },
           },
           'ingress': {
-            'enabled': exposeUsingIngress,
-            'annotations': {
-              "kubernetes.io/ingress.class": "nginx",
-              "nginx.ingress.kubernetes.io/backend-protocol": "HTTP",
-              "nginx.ingress.kubernetes.io/configuration-snippet": "rewrite ^(/)$ $1/ break;\n",
-              "nginx.ingress.kubernetes.io/rewrite-target": "/$2"
+            enabled: exposeUsingIngress,
+            annotations: {
+              'kubernetes.io/ingress.class': 'nginx',
+              'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+              'nginx.ingress.kubernetes.io/configuration-snippet': 'rewrite ^(/)$ $1/ break;\n',
+              'nginx.ingress.kubernetes.io/rewrite-target': '/$2',
             },
-            'path': '/grafana(/|$)(.*)'
-          }
-        }
-      }
+            hosts: [domainName? domainName : undefined],
+            path: '/grafana(/|$)(.*)',
+          },
+        },
+      },
     });
   }
 }
