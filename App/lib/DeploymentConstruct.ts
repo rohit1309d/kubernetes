@@ -1,7 +1,6 @@
 import * as cdk8s from 'cdk8s';
 import * as kplus from 'cdk8s-plus';
 import { Construct } from 'constructs';
-import * as path from 'path';
 
 export interface DeploymentProps {
   /**
@@ -73,7 +72,7 @@ export class DeploymentConstruct extends cdk8s.Chart {
 
     this.deployment = new kplus.Deployment(this, props.deploymentName, {
       metadata: {
-        name: 'deployment'
+        name: props.deploymentName.toLowerCase(),
       },
       replicas: props.replicas || 2,
       containers: [container],
@@ -89,16 +88,16 @@ export class DeploymentConstruct extends cdk8s.Chart {
   }
 
   addEnvironmentVariables(container: kplus.Container, envVar: Record<string, string>) {
-    const appMap = new kplus.ConfigMap(this, 'Env', {
+    new kplus.ConfigMap(this, 'Env', {
       metadata: {
-        name: 'env-config-map'
+        name: 'env-config-map',
       },
-      data: envVar
+      data: envVar,
     });
 
     const config = kplus.ConfigMap.fromConfigMapName('env-config-map');
 
-    for( const key in envVar) {
+    for ( const key in envVar) {
       container.addEnv(key, kplus.EnvValue.fromConfigMap(config, key));
     }
   }
