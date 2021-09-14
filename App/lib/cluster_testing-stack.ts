@@ -15,8 +15,6 @@ export class ClusterTestingStack extends cdk.Stack {
       deployKubeDashboard: true,
       exposeAppUsingIngress: true,
       exposeKubeDashboardUsingIngress: true,
-      deployKibanaDashboard: true,
-      exposeKibanaDashboardUsingIngress: true,
       deployGrafana: true,
       exposeGrafanaUsingIngress: true,
       deploymentProps: {

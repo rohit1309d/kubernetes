@@ -174,7 +174,7 @@ export class ClusterConstruct extends cdk.Construct {
 
     this.cluster = new eks.Cluster(this, props.clusterName, {
       clusterName: props.clusterName,
-      defaultCapacity: 3,
+      defaultCapacity: 2,
       vpc: vpc,
       defaultCapacityInstance: instance,
       version: props.kubernetesVersion || eks.KubernetesVersion.V1_19,
@@ -526,7 +526,7 @@ export class ClusterConstruct extends cdk.Construct {
         grafana: {
           'grafana.ini': {
             server: {
-              root_url: '%(protocol)s://%(domain)s:%(http_port)s/grafana/',
+              root_url: 'https://kubernetes.enthires.com/grafana', // TODO - change it later
               server_from_sub_path: true,
             },
           },
